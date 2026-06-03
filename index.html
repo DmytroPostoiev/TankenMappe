@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tankpreismonitor</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: Arial, sans-serif; background: #f4f6f9; color: #222; padding: 24px; }
+.app { max-width: 980px; margin: 0 auto; }
+h1 { font-size: 22px; font-weight: 600; color: #1a6fb5; margin-bottom: 1.5rem; }
+.controls { display: grid; grid-template-columns: 2fr 1fr 1fr auto auto; gap: 10px; margin-bottom: 1rem; align-items: end; }
+.field label { font-size: 12px; color: #666; display: block; margin-bottom: 4px; }
+.field { position: relative; }
+.field input, .field select { width: 100%; padding: 8px 10px; border: 1px solid #d0d5dd; border-radius: 6px; font-size: 14px; background: #fff; }
+.field input:focus { outline: none; border-color: #1a6fb5; }
+.suggestions { position: absolute; top: 100%; left: 0; right: 0; background: #fff; border: 1px solid #d0d5dd; border-top: none; border-radius: 0 0 6px 6px; z-index: 100; max-height: 200px; overflow-y: auto; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+.suggestions div { padding: 8px 12px; cursor: pointer; font-size: 13px; border-bottom: 1px solid #f0f0f0; }
+.suggestions div:hover { background: #f0f7ff; color: #1a6fb5; }
+.suggestions div:last-child { border-bottom: none; }
+.btn-primary { background: #1a6fb5; color: white; border: none; border-radius: 6px; padding: 0 16px; height: 36px; font-size: 14px; cursor: pointer; }
+.btn-primary:hover { background: #155d99; }
+.btn-secondary { background: #fff; color: #333; border: 1px solid #d0d5dd; border-radius: 6px; padding: 0 16px; height: 36px; font-size: 14px; cursor: pointer; }
+.btn-secondary:hover { background: #f0f0f0; }
+.status-bar { display: flex; align-items: center; gap: 12px; font-size: 12px; color: #666; margin-bottom: 1rem; padding: 8px 12px; background: #fff; border: 1px solid #e0e0e0; border-radius: 6px; }
+.status-dot { width: 7px; height: 7px; border-radius: 50%; background: #ccc; flex-shrink: 0; }
+.status-dot.live { background: #27a96c; animation: pulse 2s infinite; }
+.status-dot.loading { background: #e09b1d; }
+.status-dot.error { background: #d94444; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+.countdown { margin-left: auto; }
+.filter-row { display: flex; align-items: center; gap: 10px; margin-bottom: 1rem; font-size: 13px; flex-wrap: wrap; }
+.filter-row span { color: #666; }
+.sort-btn { padding: 5px 12px; border-radius: 6px; border: 1px solid #d0d5dd; background: #fff; font-size: 12px; cursor: pointer; color: #555; }
+.sort-btn.active { background: #e8f4fd; color: #1a6fb5; border-color: #a8cfee; }
+.open-toggle { padding: 5px 12px; border-radius: 6px; border: 1px solid #d0d5dd; background: #fff; font-size: 13px; cursor: pointer; color: #555; }
+.open-toggle.active { background: #e6f7ef; color: #1a7a4a; border-color: #8fd4b2; }
+.stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 1rem; }
+.stat { background: #fff; border: 1px solid #e0e0e0; border-radius: 8px; padding: 10px 14px; }
+.stat-label { font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 4px; }
+.stat-value { font-size: 20px; font-weight: 600; }
+.table-wrap { border: 1px solid #e0e0e0; border-radius: 10px; overflow: hidden; background: #fff; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+thead { background: #f0f4f8; }
+th { padding: 10px 14px; text-align: left; font-weight: 600; font-size: 12px; color: #555; text-transform: uppercase; letter-spacing: 0.04em; border-bottom: 1px solid #e0e0e0; cursor: pointer; white-space: nowrap; }
+td { padding: 10px 14px; border-bottom: 1px solid #f0f0f0; vertical-align: middle; }
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: #f9fbfd; }
+.price { font-weight: 600; font-size: 15px; }
+.price.best { color: #1a8a55; }
+.price.worst { color: #c0392b; }
+.badge-open { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 11px; background: #e6f7ef; color: #1a7a4a; }
+.badge-closed { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 11px; background: #fdecea; color: #b53028; }
+.dist { color: #888; font-size: 13px; }
+.brand { font-weight: 600; }
+.addr { font-size: 12px; color: #888; margin-top: 1px; }
+.empty { text-align: center; padding: 3rem; color: #aaa; font-size: 15px; }
+.apikey-note { font-size: 12px; color: #888; margin-top: 10px; }
+.apikey-note a { color: #1a6fb5; }
+.geo-info { font-size: 12px; color: #1a6fb5; background: #e8f4fd; padding: 4px 10px; border-radius: 4px; margin-bottom: 8px; display: none; }
+</style>
+</head>
+<body>
+<div class="app">
+  
+
+  <div class="controls">
+    <div class="field">
+      <label>Ort, Adresse oder PLZ</label>
+      <input type="text" id="ortInput" placeholder="z.B. Freiburg, Hauptstraße 5, 79098..." autocomplete="off" oninput="onOrtInput()" onkeydown="onOrtKey(event)" />
+      <div class="suggestions" id="suggestions" style="display:none"></div>
+    </div>
+    <div class="field">
+      <label>Radius (km)</label>
+      <input type="number" id="radius" value="12" min="1" max="25" />
+    </div>
+    <div class="field">
+      <label>Kraftstoff</label>
+      <select id="fueltype">
+        <option value="all">Alle Typen</option>
+        <option value="e5">Super E5</option>
+        <option value="e10">Super E10</option>
+        <option value="diesel" selected>Diesel</option>
+      </select>
+    </div>
+    <button class="btn-primary" onclick="startSearch()">🔍 Suchen</button>
+    <button class="btn-secondary" onclick="exportPDF()">📄 PDF</button>
+  </div>
+
+  <div class="geo-info" id="geoInfo"></div>
+
+  <div class="status-bar">
+    <div class="status-dot" id="statusDot"></div>
+    <span id="statusText">Ort eingeben und auf Suchen klicken.</span>
+    <span class="countdown" id="countdown"></span>
+  </div>
+
+  <div class="stats-row" id="statsRow" style="display:none">
+    <div class="stat"><div class="stat-label">Stationen</div><div class="stat-value" id="statCount">—</div></div>
+    <div class="stat"><div class="stat-label">Günstigster</div><div class="stat-value" id="statMin" style="color:#1a8a55">—</div></div>
+    <div class="stat"><div class="stat-label">Teuerster</div><div class="stat-value" id="statMax" style="color:#c0392b">—</div></div>
+    <div class="stat"><div class="stat-label">Durchschnitt</div><div class="stat-value" id="statAvg">—</div></div>
+  </div>
+
+  <div class="filter-row">
+    <span>Sortieren:</span>
+    <button class="sort-btn active" id="sortPrice" onclick="setSort('price')">💶 Preis</button>
+    <button class="sort-btn" id="sortDist" onclick="setSort('dist')">📍 Distanz</button>
+    <button class="sort-btn" id="sortName" onclick="setSort('name')">🔤 Name</button>
+    <button class="open-toggle" id="openToggle" onclick="toggleOpen()">🚪 Nur geöffnete</button>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Station</th>
+          <th onclick="setSort('dist')" style="cursor:pointer">Distanz ↕</th>
+          <th onclick="setSort('price')" style="cursor:pointer">Preis ↕</th>
+          <th>Status</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="tableBody">
+        <tr><td colspan="4" class="empty">Ort eingeben und auf Suchen klicken.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="apikey-note">API-Key kostenlos auf <a href="https://creativecommons.tankerkoenig.de" target="_blank">creativecommons.tankerkoenig.de</a> registrieren.</div>
+</div>
+
+<script>
+// ============================================================
+//  HIER DEINEN API-KEY EINTRAGEN:
+const API_KEY = "6da085a0-960a-4287-897a-dc38d68a1dce";
+// ============================================================
+
+let allStations = [];
+let currentSort = 'price';
+let showOnlyOpen = false;
+let countdownTimer = null;
+let secondsLeft = 0;
+let currentFuel = 'diesel';
+let resolvedLat = null;
+let resolvedLng = null;
+let resolvedName = null;
+let suggestTimer = null;
+let suggestions = [];
+let selectedSuggestion = -1;
+
+// --- Autocomplete via Nominatim ---
+async function onOrtInput() {
+  const val = document.getElementById('ortInput').value.trim();
+  if (val.length < 3) { hideSuggestions(); return; }
+  clearTimeout(suggestTimer);
+  suggestTimer = setTimeout(() => fetchSuggestions(val), 350);
+}
+
+async function fetchSuggestions(query) {
+  try {
+    const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&countrycodes=de&limit=6&format=json&addressdetails=1`;
+    const resp = await fetch(url, { headers: { 'Accept-Language': 'de' } });
+    const data = await resp.json();
+    suggestions = data;
+    selectedSuggestion = -1;
+    showSuggestions(data);
+  } catch(e) { hideSuggestions(); }
+}
+
+function showSuggestions(data) {
+  const box = document.getElementById('suggestions');
+  if (!data.length) { hideSuggestions(); return; }
+  box.innerHTML = data.map((item, i) =>
+    `<div onclick="selectSuggestion(${i})">${item.display_name}</div>`
+  ).join('');
+  box.style.display = 'block';
+}
+
+function hideSuggestions() {
+  document.getElementById('suggestions').style.display = 'none';
+}
+
+function selectSuggestion(i) {
+  const item = suggestions[i];
+  resolvedLat = parseFloat(item.lat);
+  resolvedLng = parseFloat(item.lon);
+  resolvedName = item.display_name;
+  document.getElementById('ortInput').value = item.display_name.split(',').slice(0,2).join(',').trim();
+  hideSuggestions();
+  loadData();
+}
+
+function onOrtKey(e) {
+  const box = document.getElementById('suggestions');
+  const items = box.querySelectorAll('div');
+  if (e.key === 'ArrowDown') {
+    selectedSuggestion = Math.min(selectedSuggestion + 1, items.length - 1);
+    items.forEach((el, i) => el.style.background = i === selectedSuggestion ? '#e8f4fd' : '');
+  } else if (e.key === 'ArrowUp') {
+    selectedSuggestion = Math.max(selectedSuggestion - 1, 0);
+    items.forEach((el, i) => el.style.background = i === selectedSuggestion ? '#e8f4fd' : '');
+  } else if (e.key === 'Enter') {
+    if (selectedSuggestion >= 0) selectSuggestion(selectedSuggestion);
+    else startSearch();
+  } else if (e.key === 'Escape') {
+    hideSuggestions();
+  }
+}
+
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.field')) hideSuggestions();
+});
+
+// --- Geocoding (wenn kein Suggestion ausgewählt) ---
+async function geocode(query) {
+  const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&countrycodes=de&limit=1&format=json`;
+  const resp = await fetch(url, { headers: { 'Accept-Language': 'de' } });
+  const data = await resp.json();
+  if (!data.length) throw new Error('Ort nicht gefunden: "' + query + '"');
+  return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon), name: data[0].display_name };
+}
+
+async function startSearch() {
+  hideSuggestions();
+  const input = document.getElementById('ortInput').value.trim();
+  if (!input) { setStatus('error', 'Bitte einen Ort eingeben.'); return; }
+
+  if (!resolvedLat || !resolvedLng) {
+    setStatus('loading', 'Ort wird gesucht…');
+    document.getElementById('statusDot').className = 'status-dot loading';
+    try {
+      const geo = await geocode(input);
+      resolvedLat = geo.lat;
+      resolvedLng = geo.lng;
+      resolvedName = geo.name;
+    } catch(e) {
+      setStatus('error', e.message);
+      document.getElementById('statusDot').className = 'status-dot error';
+      return;
+    }
+  }
+
+  const geoInfo = document.getElementById('geoInfo');
+  geoInfo.textContent = '📍 Gefundener Ort: ' + resolvedName.split(',').slice(0,3).join(', ');
+  geoInfo.style.display = 'block';
+
+  loadData();
+}
+
+// --- Tankstellen laden ---
+async function loadData() {
+  if (!resolvedLat || !resolvedLng) { startSearch(); return; }
+
+  const radius = parseFloat(document.getElementById('radius').value) || 5;
+  const fuel = document.getElementById('fueltype').value;
+  currentFuel = fuel;
+
+  setStatus('loading', 'Tankstellen werden geladen…');
+  document.getElementById('statusDot').className = 'status-dot loading';
+
+  const types = fuel === 'all' ? ['e5', 'e10', 'diesel'] : [fuel];
+  const results = {};
+
+  try {
+    for (const t of types) {
+      const targetUrl = `https://creativecommons.tankerkoenig.de/json/list.php?lat=${resolvedLat}&lng=${resolvedLng}&rad=${radius}&sort=dist&type=${t}&apikey=${API_KEY}`;
+      const url = `https://corsproxy.io/?url=${encodeURIComponent(targetUrl)}`;
+      const resp = await fetch(url);
+      const data = await resp.json();
+      if (!data.ok) throw new Error(data.message || 'API-Fehler');
+      for (const s of (data.stations || [])) {
+        if (!results[s.id]) results[s.id] = { ...s, prices: {} };
+        results[s.id].prices[t] = s.price;
+      }
+    }
+    allStations = Object.values(results);
+    renderTable();
+    renderStats();
+    document.getElementById('statsRow').style.display = 'grid';
+    setStatus('live', `${allStations.length} Stationen gefunden · ${new Date().toLocaleTimeString('de-DE')}`);
+    document.getElementById('statusDot').className = 'status-dot live';
+    startCountdown();
+  } catch(e) {
+    setStatus('error', 'Fehler: ' + e.message);
+    document.getElementById('statusDot').className = 'status-dot error';
+  }
+}
+
+function getDisplayPrice(station) {
+  if (currentFuel !== 'all') return station.price;
+  const p = station.prices || {};
+  const vals = [p.e5, p.e10, p.diesel].filter(x => x && x > 0);
+  return vals.length ? Math.min(...vals) : null;
+}
+
+function renderTable() {
+  let stations = [...allStations];
+  if (showOnlyOpen) stations = stations.filter(s => s.isOpen);
+  stations.sort((a, b) => {
+    if (currentSort === 'price') return (getDisplayPrice(a)||999) - (getDisplayPrice(b)||999);
+    if (currentSort === 'dist') return (a.dist||0) - (b.dist||0);
+    return (a.brand||'').localeCompare(b.brand||'');
+  });
+
+  const prices = stations.map(s => getDisplayPrice(s)).filter(p => p && p > 0);
+  const minP = Math.min(...prices);
+  const maxP = Math.max(...prices);
+  const tbody = document.getElementById('tableBody');
+
+  if (!stations.length) {
+    tbody.innerHTML = '<tr><td colspan="4" class="empty">Keine Stationen gefunden.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = stations.map(s => {
+    const price = getDisplayPrice(s);
+    let priceClass = 'price';
+    if (price === minP) priceClass += ' best';
+    else if (price === maxP) priceClass += ' worst';
+
+    let priceCell = price
+      ? `<span class="${priceClass}">${price.toFixed(3)} €</span>`
+      : '<span style="color:#aaa">—</span>';
+
+    if (currentFuel === 'all' && s.prices) {
+      const p = s.prices;
+      const parts = [];
+      if (p.e5) parts.push(`E5: ${p.e5.toFixed(3)}`);
+      if (p.e10) parts.push(`E10: ${p.e10.toFixed(3)}`);
+      if (p.diesel) parts.push(`Diesel: ${p.diesel.toFixed(3)}`);
+      priceCell = `<span class="${priceClass}" style="font-size:13px">${parts.join(' · ')}</span>`;
+    }
+
+    const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${s.lat},${s.lng}`;
+    return `<tr>
+      <td><div class="brand">${s.brand || s.name}</div><div class="addr">${s.street} ${s.houseNumber||''}, ${s.place}</div></td>
+      <td class="dist">${s.dist ? s.dist.toFixed(1) + ' km' : '—'}</td>
+      <td>${priceCell}</td>
+      <td>${s.isOpen ? '<span class="badge-open">Geöffnet</span>' : '<span class="badge-closed">Geschlossen</span>'}</td>
+      <td><a href="${mapsUrl}" target="_blank" style="display:inline-flex;align-items:center;gap:5px;padding:5px 10px;background:#1a6fb5;color:white;border-radius:5px;text-decoration:none;font-size:12px;white-space:nowrap">🗺️ Navigation</a></td>
+    </tr>`;
+  }).join('');
+}
+
+function renderStats() {
+  const prices = allStations.map(s => getDisplayPrice(s)).filter(p => p && p > 0);
+  document.getElementById('statCount').textContent = allStations.length;
+  if (prices.length) {
+    document.getElementById('statMin').textContent = Math.min(...prices).toFixed(3) + ' €';
+    document.getElementById('statMax').textContent = Math.max(...prices).toFixed(3) + ' €';
+    document.getElementById('statAvg').textContent = (prices.reduce((a,b)=>a+b,0)/prices.length).toFixed(3) + ' €';
+  }
+}
+
+function setStatus(type, msg) {
+  document.getElementById('statusText').textContent = msg;
+}
+
+function setSort(col) {
+  currentSort = col;
+  document.querySelectorAll('.sort-btn').forEach(b => b.classList.remove('active'));
+  const map = { price: 'sortPrice', dist: 'sortDist', name: 'sortName' };
+  if (map[col]) document.getElementById(map[col]).classList.add('active');
+  if (allStations.length) renderTable();
+}
+
+function toggleOpen() {
+  showOnlyOpen = !showOnlyOpen;
+  document.getElementById('openToggle').classList.toggle('active', showOnlyOpen);
+  if (allStations.length) renderTable();
+}
+
+function startCountdown() {
+  if (countdownTimer) clearInterval(countdownTimer);
+  secondsLeft = 600;
+  updateCountdown();
+  countdownTimer = setInterval(() => {
+    secondsLeft--;
+    if (secondsLeft <= 0) { secondsLeft = 600; loadData(); }
+    updateCountdown();
+  }, 1000);
+}
+
+function updateCountdown() {
+  const m = Math.floor(secondsLeft / 60);
+  const s = secondsLeft % 60;
+  document.getElementById('countdown').textContent = `Nächste Aktualisierung in ${m}:${String(s).padStart(2,'0')}`;
+}
+
+function exportPDF() {
+  if (!allStations.length) { alert('Erst Daten laden, dann als PDF exportieren.'); return; }
+  const fuel = document.getElementById('fueltype').value;
+  const fuelLabel = { e5: 'Super E5', e10: 'Super E10', diesel: 'Diesel', all: 'Alle Kraftstoffe' }[fuel];
+  const radius = document.getElementById('radius').value;
+  const now = new Date().toLocaleString('de-DE');
+  const ortLabel = resolvedName ? resolvedName.split(',').slice(0,2).join(', ') : '—';
+
+  let stations = [...allStations];
+  if (showOnlyOpen) stations = stations.filter(s => s.isOpen);
+  stations.sort((a, b) => (getDisplayPrice(a)||999) - (getDisplayPrice(b)||999));
+
+  const prices = stations.map(s => getDisplayPrice(s)).filter(p=>p&&p>0);
+  const minP = Math.min(...prices);
+
+  // Generate QR codes as base64 data URLs
+  function makeQR(url) {
+    const div = document.createElement('div');
+    div.style.display = 'none';
+    document.body.appendChild(div);
+    const qr = new QRCode(div, { text: url, width: 80, height: 80, correctLevel: QRCode.CorrectLevel.M });
+    const canvas = div.querySelector('canvas');
+    const dataUrl = canvas ? canvas.toDataURL('image/png') : '';
+    document.body.removeChild(div);
+    return dataUrl;
+  }
+
+  const rows = stations.map((s,i) => {
+    const price = getDisplayPrice(s);
+    const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${s.lat},${s.lng}`;
+    const qrDataUrl = makeQR(mapsUrl);
+    return `<tr style="background:${i%2===0?'#fff':'#f9f9f9'}">
+      <td style="padding:8px 12px;border-bottom:1px solid #eee">${s.brand||s.name}</td>
+      <td style="padding:8px 12px;border-bottom:1px solid #eee">${s.street} ${s.houseNumber||''}, ${s.place}</td>
+      <td style="padding:8px 12px;border-bottom:1px solid #eee">${s.dist?s.dist.toFixed(1)+' km':'—'}</td>
+      <td style="padding:8px 12px;border-bottom:1px solid #eee;color:${price===minP?'#1a8a55':'#222'};font-weight:${price===minP?'600':'400'}">${price?price.toFixed(3)+' €':'—'}</td>
+      <td style="padding:8px 12px;border-bottom:1px solid #eee;color:${s.isOpen?'#1a7a4a':'#b53028'}">${s.isOpen?'Geöffnet':'Geschlossen'}</td>
+      <td style="padding:8px 12px;border-bottom:1px solid #eee;text-align:center">
+        ${qrDataUrl ? `<img src="${qrDataUrl}" width="65" height="65" style="display:block;margin:0 auto 3px" />` : ''}
+        <span style="font-size:9px;color:#888">Navigation</span>
+      </td>
+    </tr>`;
+  }).join('');
+
+  const html = `<div style="font-family:Arial,sans-serif;padding:24px;max-width:800px">
+    <div style="border-bottom:2px solid #1a6fb5;padding-bottom:12px;margin-bottom:20px">
+      <h1 style="font-size:20px;color:#1a6fb5;margin:0">⛽ Tankpreismonitor</h1>
+      <p style="color:#666;font-size:13px;margin:4px 0 0">Erstellt: ${now} · Ort: ${ortLabel} · Radius: ${radius} km · Kraftstoff: ${fuelLabel}</p>
+    </div>
+    <div style="display:flex;gap:16px;margin-bottom:20px">
+      <div style="background:#f0f7ff;padding:12px 16px;border-radius:8px;flex:1"><div style="font-size:11px;color:#666;text-transform:uppercase">Stationen</div><div style="font-size:22px;font-weight:600">${stations.length}</div></div>
+      <div style="background:#f0fff7;padding:12px 16px;border-radius:8px;flex:1"><div style="font-size:11px;color:#666;text-transform:uppercase">Günstigster</div><div style="font-size:22px;font-weight:600;color:#1a8a55">${prices.length?Math.min(...prices).toFixed(3)+' €':'—'}</div></div>
+      <div style="background:#fff5f5;padding:12px 16px;border-radius:8px;flex:1"><div style="font-size:11px;color:#666;text-transform:uppercase">Teuerster</div><div style="font-size:22px;font-weight:600;color:#c0392b">${prices.length?Math.max(...prices).toFixed(3)+' €':'—'}</div></div>
+      <div style="background:#f9f9f9;padding:12px 16px;border-radius:8px;flex:1"><div style="font-size:11px;color:#666;text-transform:uppercase">Durchschnitt</div><div style="font-size:22px;font-weight:600">${prices.length?(prices.reduce((a,b)=>a+b,0)/prices.length).toFixed(3)+' €':'—'}</div></div>
+    </div>
+    <table style="width:100%;border-collapse:collapse;font-size:13px">
+      <thead><tr style="background:#1a6fb5;color:white">
+        <th style="padding:10px 12px;text-align:left">Marke</th>
+        <th style="padding:10px 12px;text-align:left">Adresse</th>
+        <th style="padding:10px 12px;text-align:left">Distanz</th>
+        <th style="padding:10px 12px;text-align:left">Preis</th>
+        <th style="padding:10px 12px;text-align:left">Status</th>
+        <th style="padding:10px 12px;text-align:center">QR / Navigation</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+    <p style="font-size:11px;color:#999;margin-top:16px;text-align:center">Datenquelle: Tankerkönig · Automatische Aktualisierung alle 10 Minuten</p>
+  </div>`;
+
+  const el = document.createElement('div');
+  el.innerHTML = html;
+  document.body.appendChild(el);
+  html2pdf().set({
+    margin: 8,
+    filename: `tankpreise_${ortLabel.replace(/[^a-z0-9]/gi,'_')}_${new Date().toISOString().slice(0,10)}.pdf`,
+    image: { type: 'jpeg', quality: 0.95 },
+    html2canvas: { scale: 2 },
+    jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
+  }).from(el).save().then(() => document.body.removeChild(el));
+}
+</script>
+</body>
+</html>
