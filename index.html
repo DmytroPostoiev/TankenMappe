@@ -7,60 +7,488 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <style>
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: Arial, sans-serif; background: #f4f6f9; color: #222; padding: 24px; }
-.app { max-width: 980px; margin: 0 auto; }
-h1 { font-size: 22px; font-weight: 600; color: #1a6fb5; margin-bottom: 1.5rem; }
-.controls { display: grid; grid-template-columns: 2fr 1fr 1fr auto auto; gap: 10px; margin-bottom: 1rem; align-items: end; }
-.field label { font-size: 12px; color: #666; display: block; margin-bottom: 4px; }
-.field { position: relative; }
-.field input, .field select { width: 100%; padding: 8px 10px; border: 1px solid #d0d5dd; border-radius: 6px; font-size: 14px; background: #fff; }
-.field input:focus { outline: none; border-color: #1a6fb5; }
-.suggestions { position: absolute; top: 100%; left: 0; right: 0; background: #fff; border: 1px solid #d0d5dd; border-top: none; border-radius: 0 0 6px 6px; z-index: 100; max-height: 200px; overflow-y: auto; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-.suggestions div { padding: 8px 12px; cursor: pointer; font-size: 13px; border-bottom: 1px solid #f0f0f0; }
-.suggestions div:hover { background: #f0f7ff; color: #1a6fb5; }
-.suggestions div:last-child { border-bottom: none; }
-.btn-primary { background: #1a6fb5; color: white; border: none; border-radius: 6px; padding: 0 16px; height: 36px; font-size: 14px; cursor: pointer; }
-.btn-primary:hover { background: #155d99; }
-.btn-secondary { background: #fff; color: #333; border: 1px solid #d0d5dd; border-radius: 6px; padding: 0 16px; height: 36px; font-size: 14px; cursor: pointer; }
-.btn-secondary:hover { background: #f0f0f0; }
-.status-bar { display: flex; align-items: center; gap: 12px; font-size: 12px; color: #666; margin-bottom: 1rem; padding: 8px 12px; background: #fff; border: 1px solid #e0e0e0; border-radius: 6px; }
-.status-dot { width: 7px; height: 7px; border-radius: 50%; background: #ccc; flex-shrink: 0; }
-.status-dot.live { background: #27a96c; animation: pulse 2s infinite; }
-.status-dot.loading { background: #e09b1d; }
-.status-dot.error { background: #d94444; }
-@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
-.countdown { margin-left: auto; }
-.filter-row { display: flex; align-items: center; gap: 10px; margin-bottom: 1rem; font-size: 13px; flex-wrap: wrap; }
-.filter-row span { color: #666; }
-.sort-btn { padding: 5px 12px; border-radius: 6px; border: 1px solid #d0d5dd; background: #fff; font-size: 12px; cursor: pointer; color: #555; }
-.sort-btn.active { background: #e8f4fd; color: #1a6fb5; border-color: #a8cfee; }
-.open-toggle { padding: 5px 12px; border-radius: 6px; border: 1px solid #d0d5dd; background: #fff; font-size: 13px; cursor: pointer; color: #555; }
-.open-toggle.active { background: #e6f7ef; color: #1a7a4a; border-color: #8fd4b2; }
-.stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 1rem; }
-.stat { background: #fff; border: 1px solid #e0e0e0; border-radius: 8px; padding: 10px 14px; }
-.stat-label { font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 4px; }
-.stat-value { font-size: 20px; font-weight: 600; }
-.table-wrap { border: 1px solid #e0e0e0; border-radius: 10px; overflow: hidden; background: #fff; }
-table { width: 100%; border-collapse: collapse; font-size: 14px; }
-thead { background: #f0f4f8; }
-th { padding: 10px 14px; text-align: left; font-weight: 600; font-size: 12px; color: #555; text-transform: uppercase; letter-spacing: 0.04em; border-bottom: 1px solid #e0e0e0; cursor: pointer; white-space: nowrap; }
-td { padding: 10px 14px; border-bottom: 1px solid #f0f0f0; vertical-align: middle; }
-tr:last-child td { border-bottom: none; }
-tr:hover td { background: #f9fbfd; }
-.price { font-weight: 600; font-size: 15px; }
-.price.best { color: #1a8a55; }
-.price.worst { color: #c0392b; }
-.badge-open { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 11px; background: #e6f7ef; color: #1a7a4a; }
-.badge-closed { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 11px; background: #fdecea; color: #b53028; }
-.dist { color: #888; font-size: 13px; }
-.brand { font-weight: 600; }
-.addr { font-size: 12px; color: #888; margin-top: 1px; }
-.empty { text-align: center; padding: 3rem; color: #aaa; font-size: 15px; }
-.apikey-note { font-size: 12px; color: #888; margin-top: 10px; }
-.apikey-note a { color: #1a6fb5; }
-.geo-info { font-size: 12px; color: #1a6fb5; background: #e8f4fd; padding: 4px 10px; border-radius: 4px; margin-bottom: 8px; display: none; }
-</style>
+* { 
+  box-sizing: border-box; 
+  margin: 0; 
+  padding: 0; 
+}
+
+body { 
+  font-family: Arial, sans-serif; 
+  background: #f4f6f9; 
+  color: #222; 
+  padding: 12px; 
+}
+
+.app { 
+  max-width: 1200px; 
+  margin: 0 auto; 
+}
+
+h1 { 
+  font-size: 20px; 
+  font-weight: 600; 
+  color: #1a6fb5; 
+  margin-bottom: 1rem; 
+  text-align: center;
+}
+
+/* Mobile-first Steuerung */
+.controls { 
+  display: flex;
+  flex-direction: column;
+  gap: 12px; 
+  margin-bottom: 1rem; 
+}
+
+.field label { 
+  font-size: 13px; 
+  font-weight: 500;
+  color: #555; 
+  display: block; 
+  margin-bottom: 5px; 
+}
+
+.field { 
+  position: relative; 
+  width: 100%;
+}
+
+.field input, 
+.field select { 
+  width: 100%; 
+  padding: 12px 12px; 
+  border: 1px solid #d0d5dd; 
+  border-radius: 8px; 
+  font-size: 16px; /* Verhindert Zoom auf iOS */
+  background: #fff; 
+  transition: border-color 0.2s;
+}
+
+.field input:focus { 
+  outline: none; 
+  border-color: #1a6fb5; 
+  box-shadow: 0 0 0 3px rgba(26,111,181,0.1);
+}
+
+/* Buttons */
+.btn-primary, 
+.btn-secondary { 
+  width: 100%;
+  padding: 12px 16px; 
+  border-radius: 8px; 
+  font-size: 16px; 
+  font-weight: 500;
+  cursor: pointer; 
+  transition: all 0.2s;
+  text-align: center;
+}
+
+.btn-primary { 
+  background: #1a6fb5; 
+  color: white; 
+  border: none; 
+}
+
+.btn-primary:active { 
+  background: #155d99; 
+  transform: scale(0.98);
+}
+
+.btn-secondary { 
+  background: #fff; 
+  color: #333; 
+  border: 1px solid #d0d5dd; 
+}
+
+.btn-secondary:active { 
+  background: #f0f0f0;
+}
+
+/* Statusleiste */
+.status-bar { 
+  display: flex; 
+  align-items: center; 
+  flex-wrap: wrap;
+  gap: 10px; 
+  font-size: 12px; 
+  color: #666; 
+  margin-bottom: 1rem; 
+  padding: 10px 12px; 
+  background: #fff; 
+  border: 1px solid #e0e0e0; 
+  border-radius: 8px; 
+}
+
+.status-dot { 
+  width: 8px; 
+  height: 8px; 
+  border-radius: 50%; 
+  background: #ccc; 
+  flex-shrink: 0; 
+}
+
+.status-dot.live { 
+  background: #27a96c; 
+  animation: pulse 2s infinite; 
+}
+
+.countdown { 
+  margin-left: auto; 
+  font-size: 11px;
+}
+
+/* Filter-Reihe - horizontal scrollbar auf mobil */
+.filter-row { 
+  display: flex; 
+  align-items: center; 
+  gap: 8px; 
+  margin-bottom: 1rem; 
+  font-size: 13px; 
+  overflow-x: auto;
+  padding-bottom: 4px;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+}
+
+.filter-row span { 
+  color: #666; 
+  flex-shrink: 0;
+}
+
+.sort-btn, 
+.open-toggle { 
+  padding: 8px 14px; 
+  border-radius: 20px; 
+  border: 1px solid #d0d5dd; 
+  background: #fff; 
+  font-size: 13px; 
+  cursor: pointer; 
+  color: #555; 
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: all 0.2s;
+}
+
+.sort-btn:active, 
+.open-toggle:active {
+  transform: scale(0.96);
+}
+
+.sort-btn.active, 
+.open-toggle.active { 
+  background: #e8f4fd; 
+  color: #1a6fb5; 
+  border-color: #a8cfee; 
+}
+
+/* Statistik-Karten - Grid auf mobil umgestellt */
+.stats-row { 
+  display: grid; 
+  grid-template-columns: repeat(2, 1fr); 
+  gap: 10px; 
+  margin-bottom: 1rem; 
+}
+
+.stat { 
+  background: #fff; 
+  border: 1px solid #e0e0e0; 
+  border-radius: 10px; 
+  padding: 12px 10px; 
+  text-align: center;
+}
+
+.stat-label { 
+  font-size: 10px; 
+  color: #888; 
+  text-transform: uppercase; 
+  letter-spacing: 0.05em; 
+  margin-bottom: 5px; 
+}
+
+.stat-value { 
+  font-size: 18px; 
+  font-weight: 700; 
+}
+
+/* Tabelle - Karte-Darstellung auf mobil */
+.table-wrap { 
+  border: 1px solid #e0e0e0; 
+  border-radius: 12px; 
+  overflow: hidden; 
+  background: #fff; 
+}
+
+table { 
+  width: 100%; 
+  border-collapse: collapse; 
+  font-size: 13px; 
+}
+
+thead { 
+  background: #f0f4f8; 
+}
+
+thead tr {
+  display: table-row;
+}
+
+th { 
+  padding: 12px 10px; 
+  text-align: left; 
+  font-weight: 600; 
+  font-size: 11px; 
+  color: #555; 
+  text-transform: uppercase; 
+  letter-spacing: 0.05em; 
+  border-bottom: 1px solid #e0e0e0; 
+}
+
+tbody tr {
+  display: table-row;
+}
+
+td { 
+  padding: 12px 10px; 
+  border-bottom: 1px solid #f0f0f0; 
+  vertical-align: middle; 
+}
+
+tr:last-child td { 
+  border-bottom: none; 
+}
+
+/* Mobil: Tabelle in Karten umwandeln */
+@media (max-width: 768px) {
+  body {
+    padding: 8px;
+  }
+  
+  h1 {
+    font-size: 18px;
+    margin-bottom: 12px;
+  }
+  
+  /* Tabelle als Karten darstellen */
+  thead {
+    display: none;
+  }
+  
+  tbody tr {
+    display: block;
+    margin-bottom: 12px;
+    border: 1px solid #e0e0e0;
+    border-radius: 10px;
+    background: #fff;
+    padding: 12px;
+  }
+  
+  tbody td {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 8px 0;
+    border-bottom: 1px solid #eee;
+  }
+  
+  tbody td:last-child {
+    border-bottom: none;
+  }
+  
+  tbody td:before {
+    content: attr(data-label);
+    font-weight: 600;
+    font-size: 11px;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    min-width: 80px;
+  }
+  
+  /* Anpassung der Zellen-Inhalte */
+  td:first-child:before { content: "Station"; }
+  td:nth-child(2):before { content: "Distanz"; }
+  td:nth-child(3):before { content: "Preis"; }
+  td:nth-child(4):before { content: "Status"; }
+  td:last-child:before { content: "Navigation"; }
+  
+  .brand {
+    font-weight: 600;
+    font-size: 14px;
+  }
+  
+  .addr {
+    font-size: 11px;
+    margin-top: 3px;
+    width: 100%;
+  }
+  
+  .dist, .price, .badge-open, .badge-closed {
+    text-align: right;
+  }
+  
+  /* Navigation Button anpassen */
+  td:last-child a {
+    display: inline-flex;
+    padding: 6px 12px;
+    font-size: 11px;
+  }
+}
+
+/* Tablet-Optimierung */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .controls {
+    display: grid;
+    grid-template-columns: 2fr 0.8fr 0.8fr auto auto;
+    gap: 10px;
+    align-items: end;
+  }
+  
+  .btn-primary, .btn-secondary {
+    width: auto;
+    padding: 0 14px;
+    height: 42px;
+  }
+  
+  .stats-row {
+    grid-template-columns: repeat(4, 1fr);
+  }
+  
+  th, td {
+    padding: 10px 8px;
+    font-size: 12px;
+  }
+  
+  .price {
+    font-size: 13px;
+  }
+}
+
+/* Desktop */
+@media (min-width: 1025px) {
+  body {
+    padding: 24px;
+  }
+  
+  .controls {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr auto auto;
+    gap: 10px;
+    align-items: end;
+  }
+  
+  .btn-primary, .btn-secondary {
+    width: auto;
+    height: 38px;
+    padding: 0 16px;
+  }
+  
+  .stats-row {
+    grid-template-columns: repeat(4, 1fr);
+  }
+  
+  .stat-value {
+    font-size: 20px;
+  }
+}
+
+/* Verbesserungen für Touch-Geräte */
+@media (hover: hover) {
+  .btn-primary:hover, .btn-secondary:hover {
+    filter: brightness(0.95);
+  }
+  
+  .sort-btn:hover, .open-toggle:hover {
+    background: #f5f5f5;
+  }
+}
+
+/* iOS-spezifische Optimierungen */
+@supports (-webkit-touch-callout: none) {
+  input, select, button {
+    -webkit-appearance: none;
+    appearance: none;
+  }
+  
+  input, select {
+    font-size: 16px !important;
+  }
+}
+
+/* Vorschläge-Liste optimieren */
+.suggestions { 
+  position: absolute; 
+  top: 100%; 
+  left: 0; 
+  right: 0; 
+  background: #fff; 
+  border: 1px solid #d0d5dd; 
+  border-top: none; 
+  border-radius: 0 0 8px 8px; 
+  z-index: 100; 
+  max-height: 250px; 
+  overflow-y: auto; 
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15); 
+}
+
+.suggestions div { 
+  padding: 12px 14px; 
+  cursor: pointer; 
+  font-size: 14px; 
+  border-bottom: 1px solid #f0f0f0; 
+}
+
+/* Geöffnet/Geschlossen Badges */
+.badge-open, 
+.badge-closed { 
+  display: inline-block; 
+  padding: 4px 10px; 
+  border-radius: 20px; 
+  font-size: 11px; 
+  font-weight: 500;
+}
+
+.badge-open { 
+  background: #e6f7ef; 
+  color: #1a7a4a; 
+}
+
+.badge-closed { 
+  background: #fdecea; 
+  color: #b53028; 
+}
+
+/* Preis-Farben */
+.price.best { 
+  color: #1a8a55; 
+  font-weight: 700;
+}
+
+.price.worst { 
+  color: #c0392b; 
+}
+
+/* API Key Hinweis */
+.apikey-note { 
+  font-size: 11px; 
+  color: #888; 
+  margin-top: 16px; 
+  text-align: center;
+}
+
+/* Geo-Info */
+.geo-info { 
+  font-size: 12px; 
+  color: #1a6fb5; 
+  background: #e8f4fd; 
+  padding: 8px 12px; 
+  border-radius: 8px; 
+  margin-bottom: 12px; 
+  display: none;
+  word-break: break-word;
+}</style>
 </head>
 <body>
 <div class="app">
